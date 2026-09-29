@@ -1,5 +1,12 @@
 import json
 import os
+# ---------------------------------------------------------
+# Fix CrewAI + Groq cache_breakpoint compatibility issue
+# ---------------------------------------------------------
+
+import crewai.llms.cache as crewai_cache
+
+crewai_cache.mark_cache_breakpoint = lambda message: message
 
 from crewai import Crew, Process, Task, LLM
 
