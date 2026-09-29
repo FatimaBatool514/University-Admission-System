@@ -1,14 +1,30 @@
 import json
-import os
+
 # ---------------------------------------------------------
-# Fix CrewAI + Groq cache_breakpoint compatibility issue
+# CrewAI + Groq compatibility fix
+# ---------------------------------------------------------
+#
+# CrewAI may add a "cache_breakpoint" field to messages.
+# Groq does not accept this field.
+#
+# This disables that marker for our simple Groq application.
 # ---------------------------------------------------------
 
 import crewai.llms.cache as crewai_cache
 
 crewai_cache.mark_cache_breakpoint = lambda message: message
 
+
+# ---------------------------------------------------------
+# CrewAI imports
+# ---------------------------------------------------------
+
 from crewai import Crew, Process, Task, LLM
+
+
+# ---------------------------------------------------------
+# Our agents
+# ---------------------------------------------------------
 
 from agents.requirements_agent import create_requirements_agent
 from agents.eligibility_agent import create_eligibility_agent
@@ -16,31 +32,7 @@ from agents.recommendation_agent import create_recommendation_agent
 
 
 # ---------------------------------------------------------
-# 1. Load Groq API key
-# ---------------------------------------------------------
-
-GROQ_API_KEY = os.getenv("GROQ_API_KEY")
-
-if not GROQ_API_KEY:
-    raise ValueError(
-        "GROQ_API_KEY is not configured. "
-        "Please add it to your Streamlit secrets."
-    )
-
-
-# ---------------------------------------------------------
-# 2. Create Groq LLM
-# ---------------------------------------------------------
-
-llm = LLM(
-    model="groq/openai/gpt-oss-120b",
-    api_key=GROQ_API_KEY,
-    temperature=0
-)
-
-
-# ---------------------------------------------------------
-# 3. Load university data
+# Load university data
 # ---------------------------------------------------------
 
 def load_university_data():
@@ -55,28 +47,34 @@ def load_university_data():
 
 
 # ---------------------------------------------------------
-# 4. Create the agents
+# Main admission system
 # ---------------------------------------------------------
 
-requirements_agent = create_requirements_agent(llm)
+def run_admission_system(student, groq_api_key):
 
-eligibility_agent = create_eligibility_agent(llm)
+    # -----------------------------------------------------
+    # Create Groq LLM
+    # -----------------------------------------------------
 
-recommendation_agent = create_recommendation_agent(llm)
+    llm = LLM(
+        model="groq/openai/gpt-oss-120b",
+        api_key=groq_api_key,
+        temperature=0
+    )
 
-
-# ---------------------------------------------------------
-# 5. Create the main function
-# ---------------------------------------------------------
-
-def run_admission_system(student):
+    # -----------------------------------------------------
+    # Load university data
+    # -----------------------------------------------------
 
     university_data = load_university_data()
 
     university_name = student["university"]
     program_name = student["program"]
 
-    # Find selected university
+    # -----------------------------------------------------
+    # Find university
+    # -----------------------------------------------------
+
     selected_university = next(
         (
             university
@@ -87,11 +85,15 @@ def run_admission_system(student):
     )
 
     if not selected_university:
+
         raise ValueError(
             f"University '{university_name}' was not found."
         )
 
-    # Find selected program
+    # -----------------------------------------------------
+    # Find program
+    # -----------------------------------------------------
+
     selected_program = next(
         (
             program
@@ -102,17 +104,30 @@ def run_admission_system(student):
     )
 
     if not selected_program:
+
         raise ValueError(
             f"Program '{program_name}' was not found."
         )
 
     # -----------------------------------------------------
+    # Create agents
+    # -----------------------------------------------------
+
+    requirements_agent = create_requirements_agent(llm)
+
+    eligibility_agent = create_eligibility_agent(llm)
+
+    recommendation_agent = create_recommendation_agent(llm)
+
+    # -----------------------------------------------------
     # TASK 1
+    # Requirements
     # -----------------------------------------------------
 
     requirements_task = Task(
+
         description=f"""
-        Determine the admission requirements for this program.
+        Determine the admission requirements for the selected program.
 
         University:
         {university_name}
@@ -120,36 +135,38 @@ def run_admission_system(student):
         Program:
         {program_name}
 
-        Officially provided program data:
+        Program data:
         {json.dumps(selected_program, indent=2)}
 
         Explain:
+
         1. Minimum percentage
         2. Whether mathematics is required
         3. Whether an entry test is required
 
+        Use ONLY the provided program data.
+
         Do not invent additional requirements.
         """,
 
-        expected_output=(
-            "A clear list of the admission requirements "
-            "based only on the provided program data."
-        ),
+        expected_output="""
+        A clear and concise list of the admission requirements.
+        """,
 
         agent=requirements_agent
     )
 
     # -----------------------------------------------------
     # TASK 2
+    # Eligibility
     # -----------------------------------------------------
 
     eligibility_task = Task(
+
         description=f"""
         Evaluate the student's eligibility.
 
-        Student information:
-
-        Name:
+        Student Name:
         {student["name"]}
 
         Qualification:
@@ -158,16 +175,16 @@ def run_admission_system(student):
         Percentage:
         {student["percentage"]}
 
-        Mathematics marks:
+        Mathematics Marks:
         {student["mathematics_marks"]}
 
-        Entry test score:
+        Entry Test Score:
         {student["entry_test_score"]}
 
-        Selected university:
+        University:
         {university_name}
 
-        Selected program:
+        Program:
         {program_name}
 
         Program requirements:
@@ -175,7 +192,8 @@ def run_admission_system(student):
 
         Determine whether the student appears eligible.
 
-        Clearly explain:
+        Explain:
+
         - Requirements satisfied
         - Requirements not satisfied
         - Final eligibility status
@@ -183,10 +201,12 @@ def run_admission_system(student):
         Do not invent requirements.
         """,
 
-        expected_output=(
-            "A clear eligibility assessment explaining "
-            "whether the student meets the provided requirements."
-        ),
+        expected_output="""
+        A clear eligibility assessment explaining:
+        1. Requirements satisfied
+        2. Requirements not satisfied
+        3. Overall eligibility status
+        """,
 
         agent=eligibility_agent,
 
@@ -195,15 +215,15 @@ def run_admission_system(student):
 
     # -----------------------------------------------------
     # TASK 3
+    # Recommendation
     # -----------------------------------------------------
 
     recommendation_task = Task(
+
         description=f"""
         Recommend suitable programs for this student.
 
-        Student:
-
-        Name:
+        Student Name:
         {student["name"]}
 
         Qualification:
@@ -212,41 +232,45 @@ def run_admission_system(student):
         Percentage:
         {student["percentage"]}
 
-        Mathematics marks:
+        Mathematics Marks:
         {student["mathematics_marks"]}
 
-        Interests:
+        Interest:
         {student["interest"]}
 
-        Available programs at the selected university:
+        Available programs:
 
         {json.dumps(selected_university["programs"], indent=2)}
 
         Recommend up to 3 programs.
 
-        For every recommendation provide:
-        1. Program name
-        2. Why it may suit the student
+        For each recommendation provide:
 
-        Use the student's academic background and interests.
-        Do not claim guaranteed admission.
+        1. Program name
+        2. Short explanation why it may suit the student
+
+        Do not guarantee admission.
         """,
 
-        expected_output=(
-            "A list of up to three suitable programs with "
-            "a short explanation for each."
-        ),
+        expected_output="""
+        Up to three suitable program recommendations
+        with a short explanation for each.
+        """,
 
         agent=recommendation_agent,
 
-        context=[requirements_task, eligibility_task]
+        context=[
+            requirements_task,
+            eligibility_task
+        ]
     )
 
     # -----------------------------------------------------
-    # CREATE CREW
+    # Create Crew
     # -----------------------------------------------------
 
     crew = Crew(
+
         agents=[
             requirements_agent,
             eligibility_agent,
@@ -265,7 +289,7 @@ def run_admission_system(student):
     )
 
     # -----------------------------------------------------
-    # RUN CREW
+    # Run Crew
     # -----------------------------------------------------
 
     result = crew.kickoff()
