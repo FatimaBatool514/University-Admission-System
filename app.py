@@ -240,3 +240,10 @@ st.caption(
     "Admission requirements should always be verified "
     "with the university's official admission office."
 )
+
+groq_api_key = st.secrets["GROQ_API_KEY"]
+
+result = run_admission_system(
+    student,
+    groq_api_key
+)
