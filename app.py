@@ -130,16 +130,12 @@ selected_university = st.selectbox(
 )
 
 
-# Find selected university
-
 university = next(
     university
     for university in universities
     if university["name"] == selected_university
 )
 
-
-# Get programs
 
 program_names = [
     program["name"]
@@ -154,15 +150,13 @@ selected_program = st.selectbox(
 
 
 # ---------------------------------------------------------
-# Check Admission Button
+# Check Admission
 # ---------------------------------------------------------
 
 if st.button(
     "🔍 Check Admission",
     type="primary"
 ):
-
-    # Check student name
 
     if not student_name.strip():
 
@@ -174,7 +168,7 @@ if st.button(
 
 
     # -----------------------------------------------------
-    # Create Student Profile
+    # Student Profile
     # -----------------------------------------------------
 
     student = {
@@ -215,7 +209,7 @@ if st.button(
             ]
 
 
-            # Run CrewAI system
+            # Run CrewAI
 
             result = run_admission_system(
                 student,
@@ -233,7 +227,7 @@ if st.button(
 
 
     # -----------------------------------------------------
-    # Display Result
+    # Display Final Result
     # -----------------------------------------------------
 
     st.success(
@@ -246,7 +240,22 @@ if st.button(
     )
 
 
-    st.write(result)
+    # -----------------------------------------------------
+    # Extract only the final AI response
+    # -----------------------------------------------------
+
+    if hasattr(result, "raw"):
+
+        final_result = result.raw
+
+    else:
+
+        final_result = str(result)
+
+
+    # Display only the clean final response
+
+    st.markdown(final_result)
 
 
 # ---------------------------------------------------------
