@@ -1,0 +1,56 @@
+{
+  "universities": [
+    {
+      "name": "Demo University",
+      "programs": [
+        {
+          "name": "BS Computer Science",
+          "minimum_percentage": 60,
+          "mathematics_required": true,
+          "entry_test_required": true
+        },
+        {
+          "name": "BS Artificial Intelligence",
+          "minimum_percentage": 65,
+          "mathematics_required": true,
+          "entry_test_required": true
+        },
+        {
+          "name": "BS Software Engineering",
+          "minimum_percentage": 60,
+          "mathematics_required": true,
+          "entry_test_required": true
+        },
+        {
+          "name": "BS Business Administration",
+          "minimum_percentage": 50,
+          "mathematics_required": false,
+          "entry_test_required": false
+        }
+      ]
+    },
+    {
+      "name": "Example Institute",
+      "programs": [
+        {
+          "name": "BS Computer Science",
+          "minimum_percentage": 55,
+          "mathematics_required": true,
+          "entry_test_required": true
+        },
+        {
+          "name": "BS Data Science",
+          "minimum_percentage": 60,
+          "mathematics_required": true,
+          "entry_test_required": true
+        },
+        {
+          "name": "BS Business Administration",
+          "minimum_percentage": 50,
+          "mathematics_required": false,
+          "entry_test_required": false
+        }
+      ]
+    }
+  ]
+}
