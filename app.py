@@ -1,12 +1,11 @@
 import json
-
 import streamlit as st
 
 from crew import run_admission_system
 
 
 # ---------------------------------------------------------
-# Page configuration
+# Page Configuration
 # ---------------------------------------------------------
 
 st.set_page_config(
@@ -17,7 +16,7 @@ st.set_page_config(
 
 
 # ---------------------------------------------------------
-# Title
+# Page Title
 # ---------------------------------------------------------
 
 st.title("🎓 AI University Admission Advisor")
@@ -29,7 +28,7 @@ st.write(
 
 
 # ---------------------------------------------------------
-# Load university data
+# Load University Data
 # ---------------------------------------------------------
 
 def load_data():
@@ -49,7 +48,7 @@ universities = data["universities"]
 
 
 # ---------------------------------------------------------
-# Student information
+# Student Information
 # ---------------------------------------------------------
 
 st.header("👨‍🎓 Student Information")
@@ -113,7 +112,7 @@ interest = st.selectbox(
 
 
 # ---------------------------------------------------------
-# University selection
+# University & Program
 # ---------------------------------------------------------
 
 st.header("🏫 University & Program")
@@ -132,12 +131,15 @@ selected_university = st.selectbox(
 
 
 # Find selected university
+
 university = next(
     university
     for university in universities
     if university["name"] == selected_university
 )
 
+
+# Get programs
 
 program_names = [
     program["name"]
@@ -152,13 +154,15 @@ selected_program = st.selectbox(
 
 
 # ---------------------------------------------------------
-# Analyze button
+# Check Admission Button
 # ---------------------------------------------------------
 
 if st.button(
     "🔍 Check Admission",
     type="primary"
 ):
+
+    # Check student name
 
     if not student_name.strip():
 
@@ -169,7 +173,9 @@ if st.button(
         st.stop()
 
 
-    # Create student profile
+    # -----------------------------------------------------
+    # Create Student Profile
+    # -----------------------------------------------------
 
     student = {
 
@@ -188,11 +194,12 @@ if st.button(
         "university": selected_university,
 
         "program": selected_program
+
     }
 
 
     # -----------------------------------------------------
-    # Run CrewAI
+    # Run Multi-Agent System
     # -----------------------------------------------------
 
     with st.spinner(
@@ -201,9 +208,20 @@ if st.button(
 
         try:
 
+            # Get Groq API key from Streamlit Secrets
+
+            groq_api_key = st.secrets[
+                "GROQ_API_KEY"
+            ]
+
+
+            # Run CrewAI system
+
             result = run_admission_system(
-                student
+                student,
+                groq_api_key
             )
+
 
         except Exception as e:
 
@@ -215,7 +233,7 @@ if st.button(
 
 
     # -----------------------------------------------------
-    # Display result
+    # Display Result
     # -----------------------------------------------------
 
     st.success(
@@ -223,7 +241,9 @@ if st.button(
     )
 
 
-    st.header("📋 Admission Assessment")
+    st.header(
+        "📋 Admission Assessment"
+    )
 
 
     st.write(result)
@@ -235,15 +255,9 @@ if st.button(
 
 st.divider()
 
+
 st.caption(
     "This application is an educational demonstration. "
     "Admission requirements should always be verified "
     "with the university's official admission office."
-)
-
-groq_api_key = st.secrets["GROQ_API_KEY"]
-
-result = run_admission_system(
-    student,
-    groq_api_key
 )
